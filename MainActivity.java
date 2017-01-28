@@ -1,49 +1,92 @@
-package com.mobile.tracker;
+package com.example.googlemaps;
 
-import org.xml.sax.DTDHandler;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Timer;
+import java.util.TimerTask;
 
-import android.support.v7.app.ActionBarActivity;
-import android.telephony.TelephonyManager;
-import android.app.AlertDialog;
-import android.app.AlertDialog.Builder;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONObject;
+
 import android.content.Context;
-import android.content.Intent;
+import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.ViewDebug.FlagToString;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends ActionBarActivity implements OnClickListener {
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.maps.MapActivity;
+
+public class MainActivity extends MapActivity {
 
 	
-	private DataManipulator dh;
-	TelephonyManager telephonyMgr;
+	public GoogleMap map;
+	private LocationManager manager;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		dh=new DataManipulator(getBaseContext());
-		String det=dh.getRegisteredData();
-//		Toast.makeText(getBaseContext(), det, Toast.LENGTH_LONG).show();
-		if(!det.equals("")) {
-//		String[] detailstr=det.split("-");
-//		String registerstatus=detailstr[4];
-		setContentView(R.layout.activity_welcome);
-//		finish();
-		}
-		else {
 		setContentView(R.layout.activity_main);
-		telephonyMgr=(TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
-
-		Button button=(Button)findViewById(R.id.register);
-//		Context context=getBaseContext();
-//		Intent i=new Intent(context,UnInstallService.class);
-//		context.startService(i);
-		}
+		map = ((MapFragment) getFragmentManager().findFragmentById(R.id.map))
+				.getMap();
+		manager = (LocationManager) this
+				.getSystemService(Context.LOCATION_SERVICE);
+		// new LostMobLocGetter().execute();
+		callAsynchronousTask();
+		// LocationListener listener = new LocationListener() {
+		//
+		// @Override
+		// public void onLocationChanged(Location location) {
+		// // TODO Auto-generated method stub
+		// double lat = location.getLatitude();
+		// double lon = location.getLongitude();
+		// map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+		// LatLng latlon = new LatLng(lat, lon);
+		// map.addMarker(new MarkerOptions().position(latlon).title(
+		// "My Location"));
+		// map.moveCamera(CameraUpdateFactory.newLatLng(latlon));
+		// map.animateCamera(CameraUpdateFactory.zoomTo(21));
+		// }
+		//
+		// @Override
+		// public void onStatusChanged(String provider, int status,
+		// Bundle extras) {
+		// // TODO Auto-generated method stub
+		//
+		// }
+		//
+		// @Override
+		// public void onProviderEnabled(String provider) {
+		// // TODO Auto-generated method stub
+		//
+		// }
+		//
+		// @Override
+		// public void onProviderDisabled(String provider) {
+		// // TODO Auto-generated method stub
+		//
+		// }
+		//
+		// };
+		// manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0,
+		// listener);
 	}
 
 	@Override
@@ -66,55 +109,105 @@ public class MainActivity extends ActionBarActivity implements OnClickListener {
 	}
 
 	@Override
-	public void onClick(View v) {
+	protected boolean isRouteDisplayed() {
 		// TODO Auto-generated method stub
-		View num1=(TextView)findViewById(R.id.firstnumber);
-		View num2=(TextView)findViewById(R.id.secondnumber);
-		View num3=(TextView)findViewById(R.id.thirdnumber);
-		Button button=(Button)findViewById(R.id.register);
-		String number1=((TextView) num1).getText().toString();
-		String number2=((TextView) num2).getText().toString();
-		String number3=((TextView) num3).getText().toString();
-		String form1="^([7-9][0-9]{9})$";
-		
-		if(v.getId()==R.id.register) {
-			if(number1 == null || number1.equals("")) {
-				Toast.makeText(getApplicationContext(), "Enter phonenumber1", Toast.LENGTH_LONG).show();
+		return false;
+	}
+
+	class LostMobLocGetter extends AsyncTask<Void, Void, JSONObject> {
+
+		@Override
+		protected JSONObject doInBackground(Void... params) {
+			JSONObject jsonResponse = null;
+			try {
+				HttpClient httpClient = new DefaultHttpClient();
+				HttpGet httpGet = new HttpGet(
+						"http://172.27.22.52:8099/MyWebService/LocationTracker");
+
+				HttpResponse response = httpClient.execute(httpGet);
+				InputStream inputstream = response.getEntity().getContent();
+				if (inputstream != null) {
+					jsonResponse = new JSONObject(
+							convertInputStreamToString(inputstream));
+
+				} else
+					jsonResponse = new JSONObject("{failure:'YES'}");
+
+			} catch (Exception e) {
+				Log.d("InputStream", e.getLocalizedMessage());
 			}
-			else if(number2 == null || number2.equals("")) {
-				Toast.makeText(getApplicationContext(), "Enter phonenumber2", Toast.LENGTH_LONG).show();
-			}
-			else if(number3 == null || number3.equals("")) {
-				Toast.makeText(getApplicationContext(), "Enter phonenumber3", Toast.LENGTH_LONG).show();
-			}
-			else if(!number1.matches(form1)) {
-				Toast.makeText(getApplicationContext(), "valid mobile number1", Toast.LENGTH_LONG).show();
-			}
-			else if(!number2.matches(form1)) {
-				Toast.makeText(getApplicationContext(), "valid mobile number2", Toast.LENGTH_LONG).show();
-			}
-			else if(!number3.matches(form1)) {
-				Toast.makeText(getApplicationContext(), "valid mobile number3", Toast.LENGTH_LONG).show();
-			}
-			else if(number1.length()==10 && number2.length()==10 && number3.length()==10) {
-//				String numone=prefix.concat(number1);
-//				String numtwo=prefix.concat(number2);
-//				String numthree=prefix.concat(number3);
-//				Toast.makeText(getApplicationContext(), "nums"+number1+number2+number3, Toast.LENGTH_LONG).show();
-				dh=new DataManipulator(this);
-				String ssno=(String)telephonyMgr.getSimSerialNumber();
-				String regstatus="yes";
-				this.dh.insert(number1, number2, number3, ssno, regstatus);
-//				String det=dh.getRegisteredData();
-				Toast.makeText(getApplicationContext(), "Registered Successfully.", Toast.LENGTH_LONG).show();
-				Intent i=new Intent(getApplicationContext(),welcome.class);
-				i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-				getApplicationContext().startActivity(i);
-//				finish();
-				
-			}
+
+			return jsonResponse;
 		}
-		
-  }
-	
+
+		protected void onPostExecute(JSONObject result) {
+			super.onPostExecute(result);
+			try {
+				LatLng myLoc = new LatLng(result.getDouble("latitude"),
+						result.getDouble("longitude"));
+//				BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory
+//						.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
+//				Marker marker = map.addMarker(new MarkerOptions()
+//						.position(myLoc).icon(bitmapDescriptor)
+//						.title(myLoc.toString()));
+//				CameraUpdate updatePosition = CameraUpdateFactory
+//						.newLatLng(myLoc);
+//
+//				// Creating CameraUpdate object for zoom
+//				CameraUpdate updateZoom = CameraUpdateFactory.zoomBy(2.0f);
+//
+//				// Updating the camera position to the user input latitude and
+//				// longitude
+//				map.moveCamera(updatePosition);
+//
+//				// Applying zoom to the marker position
+//				map.animateCamera(updateZoom);
+//				Toast.makeText(getBaseContext(), "Location Changed",
+//						Toast.LENGTH_SHORT).show();
+				
+				 map.addMarker(new MarkerOptions().position(myLoc).title(
+				 "My Location"));
+				 map.moveCamera(CameraUpdateFactory.newLatLng(myLoc));
+				 map.animateCamera(CameraUpdateFactory.zoomTo(16));
+				
+			} catch (Exception ex) {
+				android.util.Log.e("Error", ex.getMessage());
+			}
+
+		}
+
+		private String convertInputStreamToString(InputStream inputStream)
+				throws IOException {
+			BufferedReader bufferedReader = new BufferedReader(
+					new InputStreamReader(inputStream));
+			String line = "";
+			String result = "";
+			while ((line = bufferedReader.readLine()) != null)
+				result += line;
+
+			inputStream.close();
+			return result;
+		}
+	}
+
+	public void callAsynchronousTask() {
+		final Handler handler = new Handler();
+		Timer timer = new Timer();
+		TimerTask doAsynchronousTask = new TimerTask() {
+			@Override
+			public void run() {
+				handler.post(new Runnable() {
+					public void run() {
+						try {
+							LostMobLocGetter mobLocGetter = new LostMobLocGetter();
+							mobLocGetter.execute();
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				});
+			}
+		};
+		timer.schedule(doAsynchronousTask, 0, 3000);
+	}
 }
